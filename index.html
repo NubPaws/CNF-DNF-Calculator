@@ -2,13 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Truth Table Generator</title>
-  <link rel="stylesheet" href="./index.css">
-  <script src="./index.js" defer></script>
+  <title>Truth Table, CNF, and DNF Generator</title>
+  <link rel="stylesheet" href="index.css">
 </head>
 <body>
-  <h1>Truth Table Generator</h1>
-  
+  <h1>Truth Table, CNF, and DNF Generator</h1>
   <p>Enter a logical expression using the following symbols:</p>
   <ul>
     <li><strong>~</strong> for NOT</li>
@@ -17,12 +15,10 @@
     <li><strong>-></strong> for IMPLIES</li>
     <li><strong>&lt;-></strong> for EQUIVALENCE</li>
   </ul>
- 
   <p>Example: <code>(A &amp; B) -> C</code></p>
- 
   <input id="expr" type="text" placeholder="Enter logical expression here">
-  <button id="generate">Generate Truth Table</button>
-  
+  <button id="generate">Generate</button>
   <div id="result"></div>
+  <script src="index.js"></script>
 </body>
 </html>
