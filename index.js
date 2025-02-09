@@ -332,3 +332,28 @@ function generateTableAndNF() {
 
 document.getElementById("generate").addEventListener("click", generateTableAndNF);
 
+/**
+ * Keys handler for auto completing parenthesis and for automatically
+ * submitting the statement when pressing the enter key.
+ */
+document.getElementById("expr").addEventListener("keydown", (event) => {
+  const input = event.target;
+  
+  if (event.key === "(") {
+    event.preventDefault();
+    
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    
+    input.value = input.value.slice(0, start) + "(" + input.value.slice(start, end) + ")" + input.value.slice(end);
+    input.selectionStart = start + 1;
+    input.selectionEnd = end + 1;
+    return;
+  }
+  
+  if (event.key === "Enter") {
+    generateTableAndNF();
+    return;
+  }
+  
+});
