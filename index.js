@@ -200,8 +200,6 @@ function parsePrimary(parser) {
   throw new Error("Unexpected token: " + token.value);
 }
 
-// --- Evaluator ---
-// Recursively computes the truth value of the AST for a given assignment.
 function evaluateAST(ast, vars) {
   switch (ast.type) {
     case 'var':
@@ -221,7 +219,6 @@ function evaluateAST(ast, vars) {
   }
 }
 
-// --- Helper ---
 // Extracts a sorted list of variable names from the AST.
 function getVariables(ast) {
   let vars = new Set();
@@ -246,9 +243,7 @@ function getVariables(ast) {
   return Array.from(vars).sort();
 }
 
-// --- Main Function ---
-// Generates the truth table, and (using the method described) constructs DNF and CNF.
-function generateTruthTableAndNormalForms() {
+function generateTableAndNF() {
   const input = document.getElementById("expr").value;
   try {
     // Tokenize and parse the expression into an AST.
@@ -270,10 +265,15 @@ function generateTruthTableAndNormalForms() {
     let dnfClauses = [];
     let cnfClauses = [];
     
-    for (let i = 0; i < numRows; i++) {
+    /**
+     * Use a binary string to represent each line like so:
+     * p, q, r
+     * 1  0  1
+     */
+    for (let i = numRows - 1; i >= 0; i--) {
       const assignment = {};
       for (let j = 0; j < variables.length; j++) {
-        // The most significant bit corresponds to the first variable.
+        // The msb corresponds to the first variable.
         assignment[variables[j]] = Boolean((i >> (variables.length - j - 1)) & 1);
       }
       const result = evaluateAST(ast, assignment);
@@ -330,4 +330,5 @@ function generateTruthTableAndNormalForms() {
   }
 }
 
-document.getElementById("generate").addEventListener("click", generateTruthTableAndNormalForms);
+document.getElementById("generate").addEventListener("click", generateTableAndNF);
+

@@ -1,5 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
+
 body {
-  font-family: Arial, sans-serif;
+  font-family: "Fira Code", serif;
+  font-optical-sizing: auto;
+  font-style: normal;
   margin: 20px;
 }
 
@@ -7,17 +11,23 @@ input[type="text"] {
   font-size: 1em;
   padding: 5px;
   width: 400px;
+  font-family: "Fira Code", serif;
+  font-optical-sizing: auto;
+  font-style: normal;
 }
 
 button {
   font-size: 1em;
   padding: 5px 10px;
-  margin-left: 10px;
 }
 
 table {
   border-collapse: collapse;
   margin-top: 20px;
+}
+
+code {
+  font-size: 1.4em;
 }
 
 th, td {
