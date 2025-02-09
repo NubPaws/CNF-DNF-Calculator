@@ -1,4 +1,12 @@
 
+const symbols = {
+  or:  " ∨ ",
+  and: " ∧ ",
+  implies: " -> ",
+  equiv: " <-> ",
+  not: "¬",
+};
+
 function isWhiteSpace(input, i) {
   return /\s/.test(input[i]);
 }
@@ -35,26 +43,26 @@ function tokenize(input) {
     }
     
     if (isParenthesis(input, i)) {
-      tokens.push({ type: 'paren', value: input[i] });
+      tokens.push({ type: "paren", value: input[i] });
       i++;
       continue;
     }
     
     // Check if the character is one of the following operators.
     if (input[i] === '~' || input[i] === '&' || input[i] === '|') {
-      tokens.push({ type: 'operator', value: input[i] });
+      tokens.push({ type: "operator", value: input[i] });
       i++;
       continue;
     }
     
     if (isImpliedOperator(input, i)) {
-      tokens.push({ type: 'operator', value: '->' });
+      tokens.push({ type: "operator", value: '->' });
       i += 2;
       continue;
     }
     
     if (isIfAndOnlyIfOperator(input, i)) {
-      tokens.push({ type: 'operator', value: '<->' });
+      tokens.push({ type: "operator", value: '<->' });
       i += 3;
       continue;
     }
@@ -69,7 +77,7 @@ function tokenize(input) {
         varName += input[i];
         i++;
       }
-      tokens.push({ type: 'variable', value: varName });
+      tokens.push({ type: "variable", value: varName });
       continue;
     }
     throw new Error("Unknown token at position " + i + ": '" + input[i] + "'");
@@ -88,113 +96,117 @@ class Parser {
     return this.tokens[this.pos];
   }
   
-  consume(expected) {
-    let token = this.tokens[this.pos];
-    
-    if (!token) {
-      throw new Error(`Unexpected end of input, expected "${expected}"`);
-    }
-    if (expected && token.value !== expected) {
-      throw new Error(`Expected token "${expected}" but found "${token.value}"`);
-    }
-    
-    this.pos++;
-    return token;
+  pop() {
+    return this.tokens[this.pos++];
+  }
+  
+  isEmpty() {
+    return this.pos >= this.tokens.length;
+  }
+  
+  /**
+   * 
+   * @param {"paren" | "command" | "variable"} t
+   * @param  {...string} val
+   * @returns 
+   */
+  isNext(t, val) {
+    const token = this.peek();
+    return token && token.type === t && token.value === val;
   }
 }
 
+/**
+ * Parses the tokens, with the specified prescendence of:
+ * 1. ~    (not)
+ * 2. &    (and)
+ * 3. |    (or)
+ * 4. ->   (implies)
+ * 5. <->  (if and only if)
+ * 
+ * @param {[{type: "paren" | "operator" | "variable"; value: string}]} tokens 
+ * @returns the parsed expression
+ */
 function parseExpression(tokens) {
   let parser = new Parser(tokens);
   let expr = parseIfAndOnlyIf(parser);
   
+  // If the parser is not at the end of then we have a token in which we
+  // failed parsing.
   if (parser.pos < parser.tokens.length) {
     throw new Error("Unexpected token: " + parser.tokens[parser.pos].value);
   }
   return expr;
 }
 
-// Parse equivalence (<->) — lowest precedence.
 function parseIfAndOnlyIf(parser) {
   let left = parseImplies(parser);
-  while (parser.pos < parser.tokens.length &&
-         parser.tokens[parser.pos].type === 'operator' &&
-         parser.tokens[parser.pos].value === '<->') {
-    parser.consume('<->');
+  
+  while (parser.isNext("operator", "<->")) {
+    parser.pop();
     let right = parseImplies(parser);
-    left = { type: 'equiv', left: left, right: right };
+    left = { type: "equiv", left: left, right: right };
   }
   return left;
 }
 
-// Parse implication (->).
 function parseImplies(parser) {
   let left = parseOr(parser);
-  while (parser.pos < parser.tokens.length &&
-         parser.tokens[parser.pos].type === 'operator' &&
-         parser.tokens[parser.pos].value === '->') {
-    parser.consume('->');
+  while (parser.isNext("operator", "->")) {
+    parser.pop();
     let right = parseOr(parser);
-    left = { type: 'implies', left: left, right: right };
+    left = { type: "implies", left: left, right: right };
   }
   return left;
 }
 
-// Parse OR (|).
 function parseOr(parser) {
   let left = parseAnd(parser);
-  while (parser.pos < parser.tokens.length &&
-         parser.tokens[parser.pos].type === 'operator' &&
-         parser.tokens[parser.pos].value === '|') {
-    parser.consume('|');
+  while (parser.isNext("operator", "|")) {
+    parser.pop();
     let right = parseAnd(parser);
-    left = { type: 'or', left: left, right: right };
+    left = { type: "or", left: left, right: right };
   }
   return left;
 }
 
-// Parse AND (&).
 function parseAnd(parser) {
   let left = parseNot(parser);
-  while (parser.pos < parser.tokens.length &&
-         parser.tokens[parser.pos].type === 'operator' &&
-         parser.tokens[parser.pos].value === '&') {
-    parser.consume('&');
+  while (parser.isNext("operator", "&")) {
+    parser.pop();
     let right = parseNot(parser);
-    left = { type: 'and', left: left, right: right };
+    left = { type: "and", left: left, right: right };
   }
   return left;
 }
 
-// Parse NOT (~) (unary).
 function parseNot(parser) {
-  if (parser.pos < parser.tokens.length &&
-      parser.tokens[parser.pos].type === 'operator' &&
-      parser.tokens[parser.pos].value === '~') {
-    parser.consume('~');
+  if (parser.isNext("operator", "~")) {
+    parser.pop();
     let operand = parseNot(parser);
-    return { type: 'not', operand: operand };
-  } else {
-    return parsePrimary(parser);
+    return { type: "not", operand: operand };
   }
+  
+  return parsePrimary(parser);
 }
 
 function parsePrimary(parser) {
-  let token = parser.tokens[parser.pos];
+  const token = parser.pop();
   if (!token) {
     throw new Error("Unexpected end of input");
   }
-  if (token.type === 'variable') {
-    parser.consume();
-    return { type: 'var', value: token.value };
+  
+  if (token.type === "variable") {
+    return { type: "var", value: token.value };
   }
-  if (token.type === 'paren' && token.value === '(') {
-    parser.consume('(');
+  if (token.type === "paren" && token.value === '(') {
     let expr = parseIfAndOnlyIf(parser);
-    if (parser.tokens[parser.pos] && parser.tokens[parser.pos].type === 'paren' && parser.tokens[parser.pos].value === ')') {
-      parser.consume(')');
+    if (parser.isNext("paren", ")")) {
+      parser.pop();
     } else {
       throw new Error("Expected ')'");
     }
+    
     return expr;
   }
   throw new Error("Unexpected token: " + token.value);
@@ -202,17 +214,17 @@ function parsePrimary(parser) {
 
 function evaluateAST(ast, vars) {
   switch (ast.type) {
-    case 'var':
+    case "var":
       return vars[ast.value];
-    case 'not':
+    case "not":
       return !evaluateAST(ast.operand, vars);
-    case 'and':
+    case "and":
       return evaluateAST(ast.left, vars) && evaluateAST(ast.right, vars);
-    case 'or':
+    case "or":
       return evaluateAST(ast.left, vars) || evaluateAST(ast.right, vars);
-    case 'implies':
+    case "implies":
       return (!evaluateAST(ast.left, vars)) || evaluateAST(ast.right, vars);
-    case 'equiv':
+    case "equiv":
       return evaluateAST(ast.left, vars) === evaluateAST(ast.right, vars);
     default:
       throw new Error("Unknown AST node type: " + ast.type);
@@ -224,16 +236,16 @@ function getVariables(ast) {
   let vars = new Set();
   function traverse(node) {
     switch (node.type) {
-      case 'var':
+      case "var":
         vars.add(node.value);
         break;
-      case 'not':
+      case "not":
         traverse(node.operand);
         break;
-      case 'and':
-      case 'or':
-      case 'implies':
-      case 'equiv':
+      case "and":
+      case "or":
+      case "implies":
+      case "equiv":
         traverse(node.left);
         traverse(node.right);
         break;
@@ -243,25 +255,37 @@ function getVariables(ast) {
   return Array.from(vars).sort();
 }
 
+function formatInput(input) {
+  return input
+    .replace(/\s+/g, '')
+    .replace(/\|/g, symbols.or)
+    .replace(/\&/g, symbols.and)
+    .replace(/\-\>/g, symbols.implies)
+    .replace(/\<\-\>/g, symbols.equiv)
+    .replace(/\~/g, symbols.not);
+}
+
 function generateTableAndNF() {
   const input = document.getElementById("expr").value;
+  
   try {
     // Tokenize and parse the expression into an AST.
     const tokens = tokenize(input);
     const ast = parseExpression(tokens);
+    
     // Get all variables used in the expression.
     const variables = getVariables(ast);
     
-    // Begin building the truth table.
+    // Build the table header row.
     let tableHTML = "<table><thead><tr>";
     variables.forEach(v => {
       tableHTML += "<th>" + v + "</th>";
     });
-    tableHTML += "<th>" + input + "</th>";
+    tableHTML += "<th>" + formatInput(input) + "</th>";
     tableHTML += "</tr></thead><tbody>";
     
     const numRows = Math.pow(2, variables.length);
-    // Arrays to collect the clauses for DNF and CNF.
+    
     let dnfClauses = [];
     let cnfClauses = [];
     
@@ -272,6 +296,7 @@ function generateTableAndNF() {
      */
     for (let i = numRows - 1; i >= 0; i--) {
       const assignment = {};
+      
       for (let j = 0; j < variables.length; j++) {
         // The msb corresponds to the first variable.
         assignment[variables[j]] = Boolean((i >> (variables.length - j - 1)) & 1);
@@ -288,24 +313,17 @@ function generateTableAndNF() {
       
       // For DNF: For each row where the formula is true, build a conjunction clause.
       if (result) {
-        let parts = [];
-        for (let v of variables) {
-          parts.push(assignment[v] ? v : "~" + v);
-        }
-        let clause = parts.join(" ∧ ");
-        if (parts.length > 1) {
+        let clause = variables.map(v => assignment[v] ? v : symbols.not + v).join(symbols.and);
+        
+        if (variables.length > 1) {
           clause = "(" + clause + ")";
         }
         dnfClauses.push(clause);
       } else {
         // For CNF: For each row where the formula is false, build a disjunction clause.
-        let parts = [];
-        for (let v of variables) {
-          // Note: Reverse the literal—if the variable is true, include its negation; if false, include the variable.
-          parts.push(assignment[v] ? "~" + v : v);
-        }
-        let clause = parts.join(" ∨ ");
-        if (parts.length > 1) {
+        let clause = variables.map(v => assignment[v] ? symbols.not + v : v).join(symbols.or);
+        
+        if (variables.length > 1) {
           clause = "(" + clause + ")";
         }
         cnfClauses.push(clause);
@@ -314,19 +332,19 @@ function generateTableAndNF() {
     tableHTML += "</tbody></table>";
     
     // Construct the overall DNF and CNF.
-    let dnf = dnfClauses.length > 0 ? dnfClauses.join(" ∨ ") : "False";
-    let cnf = cnfClauses.length > 0 ? cnfClauses.join(" ∧ ") : "True";
+    let dnf = dnfClauses.length > 0 ? dnfClauses.join(symbols.or) : "False";
+    let cnf = cnfClauses.length > 0 ? cnfClauses.join(symbols.and) : "True";
     
     // Combine the truth table and the normal forms for display.
     let resultHTML = tableHTML;
-    resultHTML += "<div class='normal-forms'>";
-    resultHTML += "<p><strong>DNF:</strong> " + dnf + "</p>";
-    resultHTML += "<p><strong>CNF:</strong> " + cnf + "</p>";
-    resultHTML += "</div>";
+    resultHTML += `<div class="normal-forms">`;
+    resultHTML += `<p><strong>DNF:</strong> ${dnf}</p>`;
+    resultHTML += `<p><strong>CNF:</strong> ${cnf}</p>`;
+    resultHTML += `</div>`;
     
     document.getElementById("result").innerHTML = resultHTML;
   } catch (e) {
-    document.getElementById("result").innerHTML = "<p class='error'>Error: " + e.message + "</p>";
+    document.getElementById("result").innerHTML = `<p class="error">Error: ${e.message} </p>`;
   }
 }
 
