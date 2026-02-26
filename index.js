@@ -93,7 +93,7 @@ function isNotOperator(input, i) {
  * @returns {boolean} Whether the character is a conjunction operator.
  */
 function isAndOperator(input, i) {
-  return input[i] === '&';
+  return input[i] === '&' || input[i] === '∧';
 }
 
 /**
@@ -104,7 +104,23 @@ function isAndOperator(input, i) {
  * @returns {boolean} Whether the character is a disjunction operator.
  */
 function isOrOperator(input, i) {
-  return input[i] === '|';
+  return input[i] === '|' || input[i] === '∨';
+}
+
+function isStartOfVariable(input, i) {
+  return /[A-Za-z]/.test(input[i]);
+}
+
+function getVarName(input, i) {
+  let varName = '';
+
+  // Keep reading until we don't have a letter, number or underscore.
+  while (i < input.length && /[A-Za-z0-9_]/.test(input[i])) {
+    varName += input[i];
+    i++;
+  }
+
+  return varName;
 }
 
 /**
@@ -154,15 +170,10 @@ function tokenize(input) {
 
     // Check if we have a variable that can be made with a letter at the start and
     // then have any combination of letters, numbers and underscore.
-    if (/[A-Za-z]/.test(input[i])) {
-      let varName = '';
-
-      // Keep reading until we don't have a letter, number or underscore.
-      while (i < input.length && /[A-Za-z0-9_]/.test(input[i])) {
-        varName += input[i];
-        i++;
-      }
+    if (isStartOfVariable(input, i)) {
+      const varName = getVarName(input, i);
       tokens.push({ type: 'variable', value: varName });
+      i += varName.length;
       continue;
     }
     throw new Error('Unknown token at position ' + i + ": '" + input[i] + "'");
@@ -424,8 +435,8 @@ function formatInput(input) {
     .replace(/\s+/g, '')
     .replace(/\|/g, symbols.or)
     .replace(/\&/g, symbols.and)
-    .replace(/\-\>/g, symbols.implies)
     .replace(/\<\-\>/g, symbols.equiv)
+    .replace(/(?<!<)\-\>/g, symbols.implies)
     .replace(/\~/g, symbols.not);
 }
 
