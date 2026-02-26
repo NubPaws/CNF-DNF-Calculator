@@ -54,7 +54,7 @@ function isParenthesis(input, i) {
  * @returns {boolean} Whether an implication operator starts at this position.
  */
 function isImpliedOperator(input, i) {
-  if (input[i] !== '-')
+  if (input[i] !== '-' && input[i] !== '=')
     return false;
   
   const check = input.slice(i, i + 2);
