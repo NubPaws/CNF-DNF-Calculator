@@ -74,14 +74,35 @@ function isIfAndOnlyIfOperator(input, i) {
   return check === '<->' || check === '<=>';
 }
 
+/**
+ * Checks if the character at position `i` is a negation operator (`~`, `!`, or `¬`).
+ *
+ * @param {string} input - The input string.
+ * @param {number} i - The index to check.
+ * @returns {boolean} Whether the character is a negation operator.
+ */
 function isNotOperator(input, i) {
   return input[i] === '~' || input[i] === '!' || input[i] === '¬';
 }
 
+/**
+ * Checks if the character at position `i` is a conjunction operator (`&`).
+ *
+ * @param {string} input - The input string.
+ * @param {number} i - The index to check.
+ * @returns {boolean} Whether the character is a conjunction operator.
+ */
 function isAndOperator(input, i) {
   return input[i] === '&';
 }
 
+/**
+ * Checks if the character at position `i` is a disjunction operator (`|`).
+ *
+ * @param {string} input - The input string.
+ * @param {number} i - The index to check.
+ * @returns {boolean} Whether the character is a disjunction operator.
+ */
 function isOrOperator(input, i) {
   return input[i] === '|';
 }
