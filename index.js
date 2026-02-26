@@ -1,4 +1,21 @@
+/**
+ * @typedef {"paren" | "operator" | "variable"} TokenType
+ */
 
+/**
+ * @typedef {Object} Token
+ * @property {TokenType} type
+ * @property {string} value
+ */
+
+/**
+ * @typedef {{type: "var", value: string}} VarNode
+ * @typedef {{type: "not", operand: ASTNode}} NotNode
+ * @typedef {{type: "and" | "or" | "implies" | "equiv", left: ASTNode, right: ASTNode}} BinaryNode
+ * @typedef {VarNode | NotNode | BinaryNode} ASTNode
+ */
+
+/** @type {{or: " ∨ ", and: " ∧ ", implies: " -> ", equiv: " <-> ", not: "¬"}} */
 const symbols = {
   or:  " ∨ ",
   and: " ∧ ",
@@ -7,14 +24,35 @@ const symbols = {
   not: "¬",
 };
 
+/**
+ * Checks if the character at position `i` in the input is whitespace.
+ *
+ * @param {string} input - The input string.
+ * @param {number} i - The index to check.
+ * @returns {boolean} Whether the character is whitespace.
+ */
 function isWhiteSpace(input, i) {
   return /\s/.test(input[i]);
 }
 
+/**
+ * Checks if the character at position `i` in the input is a parenthesis.
+ *
+ * @param {string} input - The input string.
+ * @param {number} i - The index to check.
+ * @returns {boolean} Whether the character is `(` or `)`.
+ */
 function isParenthesis(input, i) {
   return input[i] === '(' || input[i] === ')';
 }
 
+/**
+ * Checks if the characters starting at position `i` form an implication operator (`->` or `=>`).
+ *
+ * @param {string} input - The input string.
+ * @param {number} i - The index to check.
+ * @returns {boolean} Whether an implication operator starts at this position.
+ */
 function isImpliedOperator(input, i) {
   if (input[i] !== '-')
     return false;
@@ -23,6 +61,13 @@ function isImpliedOperator(input, i) {
   return check === "->" || check === "=>";
 }
 
+/**
+ * Checks if the characters starting at position `i` form a biconditional operator (`<->` or `<=>`).
+ *
+ * @param {string} input - The input string.
+ * @param {number} i - The index to check.
+ * @returns {boolean} Whether a biconditional operator starts at this position.
+ */
 function isIfAndOnlyIfOperator(input, i) {
   if (input[i] !== '<')
     return false;
@@ -31,6 +76,13 @@ function isIfAndOnlyIfOperator(input, i) {
   return check === "<->" || check === "<=>";
 }
 
+/**
+ * Tokenizes a logical expression string into an array of tokens.
+ *
+ * @param {string} input - The logical expression string to tokenize.
+ * @returns {Token[]} The array of parsed tokens.
+ * @throws {Error} If an unknown character is encountered.
+ */
 function tokenize(input) {
   let tokens = [];
   let i = 0;
@@ -85,30 +137,51 @@ function tokenize(input) {
   return tokens;
 }
 
-// Simple recursive descent parser to build an AST.
+/** Simple recursive descent parser to build an AST from a token array. */
 class Parser {
+  /**
+   * @param {Token[]} tokens - The tokens to parse.
+   */
   constructor(tokens) {
+    /** @type {Token[]} */
     this.tokens = tokens;
+    /** @type {number} */
     this.pos = 0;
   }
-  
+
+  /**
+   * Returns the current token without advancing the position.
+   *
+   * @returns {Token | undefined} The current token, or `undefined` if at end.
+   */
   peek() {
     return this.tokens[this.pos];
   }
-  
+
+  /**
+   * Returns the current token and advances the position by one.
+   *
+   * @returns {Token | undefined} The consumed token, or `undefined` if at end.
+   */
   pop() {
     return this.tokens[this.pos++];
   }
-  
+
+  /**
+   * Checks whether all tokens have been consumed.
+   *
+   * @returns {boolean} `true` if there are no more tokens to consume.
+   */
   isEmpty() {
     return this.pos >= this.tokens.length;
   }
-  
+
   /**
-   * 
-   * @param {"paren" | "command" | "variable"} t
-   * @param  {...string} val
-   * @returns 
+   * Checks if the next token matches the given type and value.
+   *
+   * @param {TokenType} t - The expected token type.
+   * @param {string} val - The expected token value.
+   * @returns {boolean} Whether the next token matches.
    */
   isNext(t, val) {
     const token = this.peek();
@@ -117,15 +190,17 @@ class Parser {
 }
 
 /**
- * Parses the tokens, with the specified prescendence of:
- * 1. ~    (not)
- * 2. &    (and)
- * 3. |    (or)
- * 4. ->   (implies)
- * 5. <->  (if and only if)
- * 
- * @param {[{type: "paren" | "operator" | "variable"; value: string}]} tokens 
- * @returns the parsed expression
+ * Parses the tokens into an AST with the following operator precedence
+ * (highest to lowest):
+ * 1. `~`   (not)
+ * 2. `&`   (and)
+ * 3. `|`   (or)
+ * 4. `->`  (implies)
+ * 5. `<->` (if and only if)
+ *
+ * @param {Token[]} tokens - The token array to parse.
+ * @returns {ASTNode} The root node of the parsed AST.
+ * @throws {Error} If there are leftover tokens after parsing.
  */
 function parseExpression(tokens) {
   let parser = new Parser(tokens);
@@ -139,6 +214,12 @@ function parseExpression(tokens) {
   return expr;
 }
 
+/**
+ * Parses a biconditional (`<->`) expression (lowest precedence).
+ *
+ * @param {Parser} parser - The parser instance.
+ * @returns {ASTNode} The parsed AST node.
+ */
 function parseIfAndOnlyIf(parser) {
   let left = parseImplies(parser);
   
@@ -150,6 +231,12 @@ function parseIfAndOnlyIf(parser) {
   return left;
 }
 
+/**
+ * Parses an implication (`->`) expression.
+ *
+ * @param {Parser} parser - The parser instance.
+ * @returns {ASTNode} The parsed AST node.
+ */
 function parseImplies(parser) {
   let left = parseOr(parser);
   while (parser.isNext("operator", "->")) {
@@ -160,6 +247,12 @@ function parseImplies(parser) {
   return left;
 }
 
+/**
+ * Parses a disjunction (`|`) expression.
+ *
+ * @param {Parser} parser - The parser instance.
+ * @returns {ASTNode} The parsed AST node.
+ */
 function parseOr(parser) {
   let left = parseAnd(parser);
   while (parser.isNext("operator", "|")) {
@@ -170,6 +263,12 @@ function parseOr(parser) {
   return left;
 }
 
+/**
+ * Parses a conjunction (`&`) expression.
+ *
+ * @param {Parser} parser - The parser instance.
+ * @returns {ASTNode} The parsed AST node.
+ */
 function parseAnd(parser) {
   let left = parseNot(parser);
   while (parser.isNext("operator", "&")) {
@@ -180,6 +279,12 @@ function parseAnd(parser) {
   return left;
 }
 
+/**
+ * Parses a negation (`~`) expression (highest precedence among operators).
+ *
+ * @param {Parser} parser - The parser instance.
+ * @returns {ASTNode} The parsed AST node.
+ */
 function parseNot(parser) {
   if (parser.isNext("operator", "~")) {
     parser.pop();
@@ -190,6 +295,13 @@ function parseNot(parser) {
   return parsePrimary(parser);
 }
 
+/**
+ * Parses a primary expression: either a variable or a parenthesized sub-expression.
+ *
+ * @param {Parser} parser - The parser instance.
+ * @returns {ASTNode} The parsed AST node.
+ * @throws {Error} If the input ends unexpectedly or an unexpected token is found.
+ */
 function parsePrimary(parser) {
   const token = parser.pop();
   if (!token) {
@@ -212,6 +324,14 @@ function parsePrimary(parser) {
   throw new Error("Unexpected token: " + token.value);
 }
 
+/**
+ * Recursively evaluates an AST node against a variable assignment.
+ *
+ * @param {ASTNode} ast - The AST node to evaluate.
+ * @param {Record<string, boolean>} vars - A mapping of variable names to boolean values.
+ * @returns {boolean} The result of evaluating the expression.
+ * @throws {Error} If an unknown AST node type is encountered.
+ */
 function evaluateAST(ast, vars) {
   switch (ast.type) {
     case "var":
@@ -231,7 +351,12 @@ function evaluateAST(ast, vars) {
   }
 }
 
-// Extracts a sorted list of variable names from the AST.
+/**
+ * Extracts a sorted list of unique variable names from the AST.
+ *
+ * @param {ASTNode} ast - The root AST node.
+ * @returns {string[]} A sorted array of variable names.
+ */
 function getVariables(ast) {
   let vars = new Set();
   function traverse(node) {
@@ -255,6 +380,12 @@ function getVariables(ast) {
   return Array.from(vars).sort();
 }
 
+/**
+ * Replaces ASCII operator characters in the input with their Unicode symbol equivalents.
+ *
+ * @param {string} input - The raw expression string.
+ * @returns {string} The formatted string with Unicode logical symbols.
+ */
 function formatInput(input) {
   return input
     .replace(/\s+/g, '')
@@ -265,6 +396,12 @@ function formatInput(input) {
     .replace(/\~/g, symbols.not);
 }
 
+/**
+ * Reads the expression from the input field, generates a truth table,
+ * computes the DNF and CNF, and renders the results into the DOM.
+ *
+ * @returns {void}
+ */
 function generateTableAndNF() {
   const input = document.getElementById("expr").value;
   
