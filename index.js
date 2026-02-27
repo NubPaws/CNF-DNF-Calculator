@@ -107,15 +107,28 @@ function isOrOperator(input, i) {
   return input[i] === '|' || input[i] === '∨';
 }
 
-function isStartOfVariable(input, i) {
-  return /[A-Za-z]/.test(input[i]);
+/**
+ * Checks if a character is a valid variable character (letter, digit, or underscore).
+ *
+ * @param {string} chr - The character to check.
+ * @returns {boolean} Whether the character is a valid variable character.
+ */
+function isVariableChar(chr) {
+  return /[A-Za-z0-9_]/.test(chr);
 }
 
+/**
+ * Reads a variable name starting at position `i` in the input string.
+ *
+ * @param {string} input - The input string.
+ * @param {number} i - The index to start reading from.
+ * @returns {string} The extracted variable name.
+ */
 function getVarName(input, i) {
   let varName = '';
 
   // Keep reading until we don't have a letter, number or underscore.
-  while (i < input.length && /[A-Za-z0-9_]/.test(input[i])) {
+  while (i < input.length && isVariableChar(input[i])) {
     varName += input[i];
     i++;
   }
@@ -170,7 +183,7 @@ function tokenize(input) {
 
     // Check if we have a variable that can be made with a letter at the start and
     // then have any combination of letters, numbers and underscore.
-    if (isStartOfVariable(input, i)) {
+    if (isVariableChar(input[i])) {
       const varName = getVarName(input, i);
       tokens.push({ type: 'variable', value: varName });
       i += varName.length;
